@@ -1,5 +1,6 @@
 #! /bin/bash
 
+## Input parameter check
 if [ "$1" == "" ] || [ "$#" -gt "1" ] || [ ! -e $1 ]
 then
         echo "not exist python file or more than one file"
@@ -7,18 +8,22 @@ then
         exit
 fi
 
+## Import error data
 source /home/kdwhan27/iw_shell/python/error.dat
 
+## Result save path setup
 mkdir -p result
 
 FILE=result/temp`basename $1 .py`.txt
 FILE2=result/temp`basename $1 .py`2.txt
 FILE3=`basename $1 .py`.json
 
+## Run python static analysis modules  (pycodestyle, pylint, pymetrics)
 sudo pycodestyle $1 --format='%(code)s %(row)d %(col)d' > $FILE
 sudo pylint --msg-template='{msg_id} {line:3d} {column}' --reports=n $1 >> $FILE
 pymetrics -z $1 > $FILE2
 
+## Classifiy the results 
 IndenCount=0 NamingCount=0 CommentCount=0 WhiteSpaceCount=0 CodeFormatCount=0 StatementCount=0 FunctionCount=0 ClassCount=0 ModuleCount=0
 declare -a temp1
 declare -a temp2
@@ -166,11 +171,11 @@ do
         fi
 done<$FILE2
 
-
+## Remove temp files
 rm $FILE
 rm $FILE2
 
-#colon remove
+## Make result to JSON type
 if [[ "$IndenCount" != "0" ]];
 then
 	temp=`echo ${temp1[$IndenCount-1]} | cut -d',' -f1`','`echo ${temp1[$IndenCount-1]} | cut -d',' -f2`','`echo ${temp1[$IndenCount-1]} | cut -d',' -f3`
@@ -246,7 +251,7 @@ echo -e "\"Module\" : {\n\t\"count\":" $ModuleCount ',' >> $FILE3
 echo -e "\t\t\"error\":[\n${temp9[@]}]}" >> $FILE3
 echo "}" >> $FILE3
 
-#import json to db
+## Import json to db
 mongoimport --db test --collection docs --file $FILE3
 rm $FILE3
 
